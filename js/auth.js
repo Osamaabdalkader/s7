@@ -1,4 +1,4 @@
-// auth.js - معدل (مع نظام الإحالة)
+// auth.js - معدل (مع نظام الإحالة وإصلاح فشل إنشاء الحساب)
 class Auth {
     static async login(email, password) {
         try {
@@ -72,8 +72,19 @@ class Auth {
                 throw new Error(errorMessage);
             }
 
+            // إنشاء رمز إحالة للمستخدم الجديد (بعد نجاح التسجيل)
+            if (data.user) {
+                try {
+                    await ReferralSystem.getOrCreateReferralCode(data.user.id);
+                    console.log('تم إنشاء رمز إحالة للمستخدم الجديد:', data.user.email);
+                } catch (referralError) {
+                    console.warn('فشل في إنشاء رمز إحالة:', referralError.message);
+                    // لا نوقف العملية إذا فشل إنشاء رمز الإحالة
+                }
+            }
+
             // معالجة الإحالة إذا كان هناك رمز إحالة
-            if (userData.referralCode && userData.referralCode.trim() !== '') {
+            if (userData.referralCode && userData.referralCode.trim() !== '' && data.user) {
                 try {
                     await ReferralSystem.processReferral(userData.referralCode, data.user.id);
                     console.log('تمت معالجة الإحالة بنجاح للمستخدم:', data.user.email);
@@ -149,4 +160,4 @@ class Auth {
             }
         });
     }
-}
+                        }
