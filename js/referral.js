@@ -1,4 +1,4 @@
-// js/referral.js - نظام الإحالة الكامل (مصحح العلاقات)
+// js/referral.js - نظام الإحالة الكامل (مصحح العلاقات والمشاكل)
 class ReferralSystem {
     static async generateReferralCode(userId) {
         try {
@@ -313,31 +313,16 @@ class ReferralSystem {
             
             if (error) throw error;
             
-            // محاولة جلب معلومات المستخدمين المشير إليهم
-            const referralsWithUsers = await Promise.all(
-                (data || []).map(async (ref) => {
-                    try {
-                        // محاولة جلب البريد الإلكتروني للمستخدم المشير إليه
-                        // هذه خطوة متقدمة وليست ضرورية للعمل الأساسي
-                        return {
-                            ...ref,
-                            referred: { 
-                                email: `مستخدم ${ref.referred_id.substring(0, 8)}...`,
-                                created_at: ref.created_at
-                            }
-                        };
-                    } catch (error) {
-                        console.error('Error fetching user data:', error);
-                        return {
-                            ...ref,
-                            referred: { 
-                                email: 'مستخدم غير معروف',
-                                created_at: ref.created_at
-                            }
-                        };
+            // عرض بسيط بدون محاولة جلب بيانات المستخدمين من جدول profiles
+            const referralsWithUsers = (data || []).map(ref => {
+                return {
+                    ...ref,
+                    referred: { 
+                        email: `مستخدم ${ref.referred_id.substring(0, 8)}...`,
+                        created_at: ref.created_at
                     }
-                })
-            );
+                };
+            });
             
             return referralsWithUsers;
         } catch (error) {
