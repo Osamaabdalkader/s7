@@ -1,4 +1,4 @@
-// navigation.js - معدل مع دعم profiles
+// navigation.js - نظام التنقل الكامل (مصحح)
 class Navigation {
     static async showPage(pageId, params = {}) {
         console.log(`🔹 جاري تحميل الصفحة: ${pageId}`, params);
@@ -36,7 +36,7 @@ class Navigation {
                 this.handleRegisterPage();
                 break;
             case 'profile':
-                await this.handleProfilePage();
+                this.handleProfilePage();
                 break;
             case 'home':
                 Posts.loadPosts();
@@ -91,7 +91,7 @@ class Navigation {
         }
     }
 
-    static async handleProfilePage() {
+    static handleProfilePage() {
         const profileContent = document.getElementById('profile-content');
         const loginRequired = document.getElementById('login-required-profile');
         
@@ -102,7 +102,7 @@ class Navigation {
             } else {
                 profileContent.style.display = 'block';
                 loginRequired.style.display = 'none';
-                await this.loadProfileData();
+                this.loadProfileData();
             }
         }
     }
@@ -194,52 +194,19 @@ class Navigation {
         `).join('');
     }
 
-    static async loadProfileData() {
+    static loadProfileData() {
         if (currentUser) {
-            try {
-                // جلب البيانات من جدول profiles
-                const { data: profile, error } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', currentUser.id)
-                    .single();
-                
-                if (error) {
-                    console.warn('⚠️ لا يمكن جلب بيانات الملف الشخصي:', error);
-                    // استخدام البيانات من auth.users كبديل
-                    this.loadProfileFromAuth();
-                    return;
-                }
-                
-                const setName = (id, value) => {
-                    const el = document.getElementById(id);
-                    if (el) el.textContent = value;
-                };
-                
-                setName('profile-name', profile.full_name || 'غير محدد');
-                setName('profile-email', profile.email || 'غير محدد');
-                setName('profile-phone', profile.phone || 'غير محدد');
-                setName('profile-address', profile.address || 'غير محدد');
-                setName('profile-created', new Date(profile.created_at).toLocaleString('ar-SA'));
-                
-            } catch (error) {
-                console.error('❌ Error loading profile data:', error);
-                this.loadProfileFromAuth();
-            }
+            const setName = (id, value) => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = value;
+            };
+            
+            setName('profile-name', currentUser.user_metadata.full_name || 'غير محدد');
+            setName('profile-email', currentUser.email || 'غير محدد');
+            setName('profile-phone', currentUser.user_metadata.phone || 'غير محدد');
+            setName('profile-address', currentUser.user_metadata.address || 'غير محدد');
+            setName('profile-created', new Date(currentUser.created_at).toLocaleString('ar-SA'));
         }
-    }
-
-    static loadProfileFromAuth() {
-        const setName = (id, value) => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = value;
-        };
-        
-        setName('profile-name', currentUser.user_metadata.full_name || 'غير محدد');
-        setName('profile-email', currentUser.email || 'غير محدد');
-        setName('profile-phone', currentUser.user_metadata.phone || 'غير محدد');
-        setName('profile-address', currentUser.user_metadata.address || 'غير محدد');
-        setName('profile-created', new Date(currentUser.created_at).toLocaleString('ar-SA'));
     }
 
     static updateNavigation() {
@@ -275,4 +242,4 @@ class Navigation {
     static rebindPageEvents(pageId) {
         console.log(`🔹 إعادة ربط أحداث الصفحة: ${pageId}`);
     }
-    }
+                          }
