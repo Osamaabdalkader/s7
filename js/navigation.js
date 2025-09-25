@@ -1,4 +1,4 @@
-// navigation.js - نظام التنقل الكامل (مصحح)
+// navigation.js - مصحح (بدون الاعتماد على profiles)
 class Navigation {
     static async showPage(pageId, params = {}) {
         console.log(`🔹 جاري تحميل الصفحة: ${pageId}`, params);
@@ -86,7 +86,7 @@ class Navigation {
             const referralInput = document.getElementById('referral-code');
             if (referralInput) {
                 referralInput.value = storedCode;
-                Utils.showStatus(`تم تعبئة رمز الإحالة تلقائياً: ${storedCode}`, 'success', 'register-status');
+                Utils.showStatus(`🔹 تم تعبئة رمز الإحالة تلقائياً: ${storedCode}`, 'success', 'register-status');
             }
         }
     }
@@ -125,8 +125,6 @@ class Navigation {
         try {
             Utils.showStatus('جاري تحميل إحصائيات الإحالة...', 'success');
             
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
             const stats = await ReferralSystem.getUserReferralStats(currentUser.id);
             this.displayReferralStats(stats);
             
@@ -134,20 +132,6 @@ class Navigation {
         } catch (error) {
             console.error('❌ Error loading referral stats:', error);
             Utils.showStatus(`خطأ في تحميل الإحصائيات: ${error.message}`, 'error');
-            
-            const container = document.querySelector('.referral-container');
-            if (container) {
-                const errorHtml = `
-                    <div class="error-message" style="margin: 20px 0;">
-                        <h3><i class="fas fa-exclamation-triangle"></i> خطأ في تحميل البيانات</h3>
-                        <p>${error.message}</p>
-                        <button onclick="Navigation.handleReferralPage()" class="btn-secondary" style="margin-top: 10px;">
-                            <i class="fas fa-refresh"></i> إعادة المحاولة
-                        </button>
-                    </div>
-                `;
-                container.insertAdjacentHTML('beforeend', errorHtml);
-            }
         }
     }
 
@@ -158,11 +142,11 @@ class Navigation {
         const codeEl = document.getElementById('referral-code');
         const linkInput = document.getElementById('referral-link-input');
         
-        if (countEl) countEl.textContent = stats.referralCount;
-        if (codeEl) codeEl.textContent = stats.code;
+        if (countEl) countEl.textContent = stats.referralCount || 0;
+        if (codeEl) codeEl.textContent = stats.code || 'غير متوفر';
         if (linkInput) linkInput.value = ReferralSystem.getReferralLink(stats.code);
 
-        this.displayReferralsList(stats.referrals);
+        this.displayReferralsList(stats.referrals || []);
     }
 
     static displayReferralsList(referrals) {
@@ -184,7 +168,7 @@ class Navigation {
             <div class="referral-item">
                 <div class="referral-user">
                     <i class="fas fa-user-check" style="color: var(--accent-color);"></i>
-                    <span>${ref.referred.email}</span>
+                    <span>${ref.referred?.email || 'مستخدم غير معروف'}</span>
                 </div>
                 <div class="referral-date">
                     <i class="fas fa-calendar"></i>
@@ -198,13 +182,14 @@ class Navigation {
         if (currentUser) {
             const setName = (id, value) => {
                 const el = document.getElementById(id);
-                if (el) el.textContent = value;
+                if (el) el.textContent = value || 'غير محدد';
             };
             
-            setName('profile-name', currentUser.user_metadata.full_name || 'غير محدد');
-            setName('profile-email', currentUser.email || 'غير محدد');
-            setName('profile-phone', currentUser.user_metadata.phone || 'غير محدد');
-            setName('profile-address', currentUser.user_metadata.address || 'غير محدد');
+            // استخدام البيانات من auth.users مباشرة
+            setName('profile-name', currentUser.user_metadata?.full_name);
+            setName('profile-email', currentUser.email);
+            setName('profile-phone', currentUser.user_metadata?.phone);
+            setName('profile-address', currentUser.user_metadata?.address);
             setName('profile-created', new Date(currentUser.created_at).toLocaleString('ar-SA'));
         }
     }
@@ -212,18 +197,29 @@ class Navigation {
     static updateNavigation() {
         const isLoggedIn = !!currentUser;
         
-        // تحديث رأس الصفحة
-        document.getElementById('publish-link').style.display = isLoggedIn ? 'list-item' : 'none';
-        document.getElementById('profile-link').style.display = isLoggedIn ? 'list-item' : 'none';
-        document.getElementById('referral-link').style.display = isLoggedIn ? 'list-item' : 'none';
-        document.getElementById('logout-link').style.display = isLoggedIn ? 'list-item' : 'none';
-        document.getElementById('login-link').style.display = isLoggedIn ? 'none' : 'list-item';
-        document.getElementById('register-link').style.display = isLoggedIn ? 'none' : 'list-item';
+        const elements = {
+            'publish-link': isLoggedIn,
+            'profile-link': isLoggedIn,
+            'referral-link': isLoggedIn,
+            'logout-link': isLoggedIn,
+            'login-link': !isLoggedIn,
+            'register-link': !isLoggedIn
+        };
+
+        for (const [id, shouldShow] of Object.entries(elements)) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.style.display = shouldShow ? 'list-item' : 'none';
+            }
+        }
+
+        const footerProfile = document.getElementById('footer-profile-link');
+        const footerReferral = document.getElementById('footer-referral-link');
+        const footerPublish = document.getElementById('footer-publish-link');
         
-        // تحديث الفوتر
-        document.getElementById('footer-profile-link').style.display = isLoggedIn ? 'flex' : 'none';
-        document.getElementById('footer-referral-link').style.display = isLoggedIn ? 'flex' : 'none';
-        document.getElementById('footer-publish-link').style.display = isLoggedIn ? 'flex' : 'none';
+        if (footerProfile) footerProfile.style.display = isLoggedIn ? 'flex' : 'none';
+        if (footerReferral) footerReferral.style.display = isLoggedIn ? 'flex' : 'none';
+        if (footerPublish) footerPublish.style.display = isLoggedIn ? 'flex' : 'none';
     }
 
     static showErrorPage(error, pageId) {
@@ -242,4 +238,4 @@ class Navigation {
     static rebindPageEvents(pageId) {
         console.log(`🔹 إعادة ربط أحداث الصفحة: ${pageId}`);
     }
-                          }
+    }
