@@ -1,9 +1,8 @@
-// navigation.js - معدل (مع نظام الإحالة وإصلاح التحميل)
+// navigation.js - معدل بشكل نهائي
 class Navigation {
     static async showPage(pageId, params = {}) {
         console.log(`جاري تحميل الصفحة: ${pageId}`, params);
         
-        // إظهار رسالة تحميل
         document.getElementById('dynamic-content').innerHTML = `
             <div class="loading-page">
                 <div class="loading-spinner"></div>
@@ -24,7 +23,6 @@ class Navigation {
     static async initializePage(pageId, params = {}) {
         console.log(`جاري تهيئة الصفحة: ${pageId}`, params);
         
-        // إعطاء وقت للعناصر لتصبح جاهزة في DOM
         await new Promise(resolve => setTimeout(resolve, 100));
         
         switch (pageId) {
@@ -52,7 +50,6 @@ class Navigation {
                 break;
         }
         
-        // إعادة ربط الأحداث بعد تهيئة الصفحة
         this.rebindPageEvents(pageId);
     }
 
@@ -84,7 +81,6 @@ class Navigation {
             statusEl.style.display = 'none';
         }
         
-        // التحقق من وجود رمز إحالة مخزن وعرضه
         const storedCode = ReferralSystem.getStoredReferralCode();
         if (storedCode) {
             const referralInput = document.getElementById('referral-code');
@@ -121,38 +117,43 @@ class Navigation {
 
     static async handleReferralPage() {
         if (!currentUser) {
+            Utils.showStatus('يجب تسجيل الدخول لعرض صفحة الإحالة', 'error');
             Navigation.showPage('login');
             return;
         }
 
         try {
-            // إعطاء وقت لتحميل بيانات المستخدم
-            await new Promise(resolve => setTimeout(resolve, 500));
+            Utils.showStatus('جاري تحميل إحصائيات الإحالة...', 'success');
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
             
             const stats = await ReferralSystem.getUserReferralStats(currentUser.id);
             this.displayReferralStats(stats);
+            
+            Utils.showStatus('تم تحميل البيانات بنجاح', 'success');
         } catch (error) {
             console.error('Error loading referral stats:', error);
-            Utils.showStatus('خطأ في تحميل إحصائيات الإحالة', 'error');
+            Utils.showStatus(`خطأ في تحميل الإحصائيات: ${error.message}`, 'error');
             
-            // عرض رسالة خطأ مفصلة
             const container = document.querySelector('.referral-container');
             if (container) {
-                container.innerHTML += `
-                    <div class="error-message">
-                        <h3>خطأ في تحميل البيانات</h3>
+                const errorHtml = `
+                    <div class="error-message" style="margin: 20px 0;">
+                        <h3><i class="fas fa-exclamation-triangle"></i> خطأ في تحميل البيانات</h3>
                         <p>${error.message}</p>
-                        <button onclick="Navigation.showPage('referral')" class="btn-secondary">
+                        <button onclick="Navigation.handleReferralPage()" class="btn-secondary" style="margin-top: 10px;">
                             <i class="fas fa-refresh"></i> إعادة المحاولة
                         </button>
                     </div>
                 `;
+                container.insertAdjacentHTML('beforeend', errorHtml);
             }
         }
     }
 
     static displayReferralStats(stats) {
-        // تحديث الإحصائيات
+        console.log('عرض إحصائيات الإحالة:', stats);
+        
         const countEl = document.getElementById('referral-count');
         const codeEl = document.getElementById('referral-code');
         const linkInput = document.getElementById('referral-link-input');
@@ -161,7 +162,6 @@ class Navigation {
         if (codeEl) codeEl.textContent = stats.code;
         if (linkInput) linkInput.value = ReferralSystem.getReferralLink(stats.code);
 
-        // عرض قائمة الإحالات
         this.displayReferralsList(stats.referrals);
     }
 
@@ -170,17 +170,24 @@ class Navigation {
         if (!listEl) return;
 
         if (referrals.length === 0) {
-            listEl.innerHTML = '<p class="no-referrals">لا توجد إحالات حتى الآن</p>';
+            listEl.innerHTML = `
+                <div class="no-referrals">
+                    <i class="fas fa-users" style="font-size: 3rem; color: #ddd; margin-bottom: 15px;"></i>
+                    <p>لا توجد إحالات حتى الآن</p>
+                    <small>شارك رابط الإحالة الخاص بك مع أصدقائك لتبدأ في كسب الإحالات</small>
+                </div>
+            `;
             return;
         }
 
         listEl.innerHTML = referrals.map(ref => `
             <div class="referral-item">
                 <div class="referral-user">
-                    <i class="fas fa-user"></i>
+                    <i class="fas fa-user-check" style="color: var(--accent-color);"></i>
                     <span>${ref.referred.email}</span>
                 </div>
                 <div class="referral-date">
+                    <i class="fas fa-calendar"></i>
                     ${new Date(ref.created_at).toLocaleString('ar-SA')}
                 </div>
             </div>
@@ -203,35 +210,20 @@ class Navigation {
     }
 
     static updateNavigation() {
-        const headerElements = {
-            'publish-link': currentUser,
-            'profile-link': currentUser,
-            'referral-link': currentUser,
-            'logout-link': currentUser,
-            'login-link': !currentUser,
-            'register-link': !currentUser
-        };
-
-        for (const [id, shouldShow] of Object.entries(headerElements)) {
-            const element = document.getElementById(id);
-            if (element) {
-                element.style.display = shouldShow ? 'list-item' : 'none';
-            }
-        }
-
-        const footerProfile = document.getElementById('footer-profile-link');
-        const footerReferral = document.getElementById('footer-referral-link');
-        const footerPublish = document.getElementById('footer-publish-link');
+        const isLoggedIn = !!currentUser;
         
-        if (footerProfile) {
-            footerProfile.style.display = currentUser ? 'flex' : 'none';
-        }
-        if (footerReferral) {
-            footerReferral.style.display = currentUser ? 'flex' : 'none';
-        }
-        if (footerPublish) {
-            footerPublish.style.display = currentUser ? 'flex' : 'none';
-        }
+        // تحديث رأس الصفحة
+        document.getElementById('publish-link').style.display = isLoggedIn ? 'list-item' : 'none';
+        document.getElementById('profile-link').style.display = isLoggedIn ? 'list-item' : 'none';
+        document.getElementById('referral-link').style.display = isLoggedIn ? 'list-item' : 'none';
+        document.getElementById('logout-link').style.display = isLoggedIn ? 'list-item' : 'none';
+        document.getElementById('login-link').style.display = isLoggedIn ? 'none' : 'list-item';
+        document.getElementById('register-link').style.display = isLoggedIn ? 'none' : 'list-item';
+        
+        // تحديث الفوتر
+        document.getElementById('footer-profile-link').style.display = isLoggedIn ? 'flex' : 'none';
+        document.getElementById('footer-referral-link').style.display = isLoggedIn ? 'flex' : 'none';
+        document.getElementById('footer-publish-link').style.display = isLoggedIn ? 'flex' : 'none';
     }
 
     static showErrorPage(error, pageId) {
@@ -240,7 +232,9 @@ class Navigation {
                 <h1 class="section-title">خطأ في تحميل الصفحة</h1>
                 <p>تعذر تحميل الصفحة المطلوبة: ${pageId}</p>
                 <p>الخطأ: ${error.message}</p>
-                <button onclick="Navigation.showPage('home')">العودة إلى الرئيسية</button>
+                <button onclick="Navigation.showPage('home')" class="btn-primary">
+                    <i class="fas fa-home"></i> العودة إلى الرئيسية
+                </button>
             </div>
         `;
     }
@@ -248,4 +242,4 @@ class Navigation {
     static rebindPageEvents(pageId) {
         console.log(`إعادة ربط أحداث الصفحة: ${pageId}`);
     }
-    }
+                }
