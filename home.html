@@ -1,0 +1,44 @@
+<!-- الصفحة الرئيسية -->
+<section id="home-page" class="page active">
+    <h1 class="section-title">المنشورات الأخيرة</h1>
+    
+    <!-- شريط البحث والفلترة -->
+    <div class="search-filter-container">
+        <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-input" placeholder="ابحث بالاسم أو الوصف...">
+        </div>
+        
+        <div class="filter-controls">
+            <select id="category-filter">
+                <option value="">جميع الأنواع</option>
+                <option value="سيارات">سيارات</option>
+                <option value="عقارات">عقارات</option>
+                <option value="أجهزة">أجهزة</option>
+                <option value="أخرى">أخرى</option>
+            </select>
+            
+            <select id="location-filter">
+                <option value="">جميع المواقع</option>
+                <!-- سيتم ملء المواقع ديناميكياً -->
+            </select>
+            
+            <button id="reset-filters" class="btn-secondary">
+                <i class="fas fa-refresh"></i> إعادة تعيين
+            </button>
+        </div>
+    </div>
+    
+    <div id="posts-container" class="posts-grid">
+        <!-- سيتم ملء المنشورات هنا بواسطة JavaScript -->
+    </div>
+    
+    <div id="no-results" class="no-results-message" style="display: none;">
+        <i class="fas fa-search"></i>
+        <h3>لا توجد نتائج</h3>
+        <p>لم نعثر على أي منشورات تطابق معايير البحث الخاصة بك.</p>
+        <button onclick="Posts.resetFilters()" class="btn-secondary">
+            <i class="fas fa-refresh"></i> عرض جميع المنشورات
+        </button>
+    </div>
+</section>

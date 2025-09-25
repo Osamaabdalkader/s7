@@ -1,0 +1,68 @@
+<!-- referral.html -->
+<section id="referral-page" class="page">
+    <div class="referral-container">
+        <h1 class="section-title">نظام الإحالة</h1>
+        
+        <div class="referral-stats-card">
+            <div class="stat-item">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-number" id="referral-count">0</span>
+                    <span class="stat-label">عدد المستخدمين الذين أشير إليهم</span>
+                </div>
+            </div>
+            
+            <div class="stat-item">
+                <div class="stat-icon">
+                    <i class="fas fa-link"></i>
+                </div>
+                <div class="stat-info">
+                    <span class="stat-number" id="referral-code">-</span>
+                    <span class="stat-label">رمز الإحالة الخاص بك</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="referral-link-card">
+            <h3><i class="fas fa-share-alt"></i> رابط الإحالة الخاص بك</h3>
+            <div class="referral-link-container">
+                <input type="text" id="referral-link-input" readonly class="referral-link-input">
+                <button onclick="ReferralSystem.copyReferralLinkToClipboard()" class="copy-link-btn">
+                    <i class="fas fa-copy"></i> نسخ
+                </button>
+            </div>
+            <p class="referral-info">شارك هذا الرابط مع أصدقائك لتحصل على مكافآت عند انضمامهم</p>
+        </div>
+
+        <div class="referrals-list-card">
+            <h3><i class="fas fa-list"></i> المستخدمين الذين انضموا عبر رابطك</h3>
+            <div id="referrals-list" class="referrals-list">
+                <!-- سيتم ملء القائمة هنا -->
+            </div>
+        </div>
+
+        <div class="referral-guide">
+            <h3><i class="fas fa-question-circle"></i> كيف يعمل نظام الإحالة؟</h3>
+            <div class="guide-steps">
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <p>انسخ رابط الإحالة الخاص بك</p>
+                </div>
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <p>شاركه مع أصدقائك وعائلتك</p>
+                </div>
+                <div class="step">
+                    <span class="step-number">3</span>
+                    <p>عند انضمامهم عبر رابطك، سيتم تسجيل إحالتك</p>
+                </div>
+                <div class="step">
+                    <span class="step-number">4</span>
+                    <p>احصل على مكافآت مقابل كل إحالة ناجحة</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
