@@ -1,7 +1,7 @@
-// navigation.js - معدل بشكل نهائي
+// navigation.js - معدل مع دعم profiles
 class Navigation {
     static async showPage(pageId, params = {}) {
-        console.log(`جاري تحميل الصفحة: ${pageId}`, params);
+        console.log(`🔹 جاري تحميل الصفحة: ${pageId}`, params);
         
         document.getElementById('dynamic-content').innerHTML = `
             <div class="loading-page">
@@ -13,15 +13,15 @@ class Navigation {
         try {
             await Utils.loadPageContent(pageId);
             await this.initializePage(pageId, params);
-            console.log(`تم تحميل الصفحة بنجاح: ${pageId}`);
+            console.log(`✅ تم تحميل الصفحة بنجاح: ${pageId}`);
         } catch (error) {
-            console.error(`فشل في تحميل الصفحة: ${pageId}`, error);
+            console.error(`❌ فشل في تحميل الصفحة: ${pageId}`, error);
             this.showErrorPage(error, pageId);
         }
     }
 
     static async initializePage(pageId, params = {}) {
-        console.log(`جاري تهيئة الصفحة: ${pageId}`, params);
+        console.log(`🔹 جاري تهيئة الصفحة: ${pageId}`, params);
         
         await new Promise(resolve => setTimeout(resolve, 100));
         
@@ -36,7 +36,7 @@ class Navigation {
                 this.handleRegisterPage();
                 break;
             case 'profile':
-                this.handleProfilePage();
+                await this.handleProfilePage();
                 break;
             case 'home':
                 Posts.loadPosts();
@@ -91,7 +91,7 @@ class Navigation {
         }
     }
 
-    static handleProfilePage() {
+    static async handleProfilePage() {
         const profileContent = document.getElementById('profile-content');
         const loginRequired = document.getElementById('login-required-profile');
         
@@ -102,7 +102,7 @@ class Navigation {
             } else {
                 profileContent.style.display = 'block';
                 loginRequired.style.display = 'none';
-                this.loadProfileData();
+                await this.loadProfileData();
             }
         }
     }
@@ -132,7 +132,7 @@ class Navigation {
             
             Utils.showStatus('تم تحميل البيانات بنجاح', 'success');
         } catch (error) {
-            console.error('Error loading referral stats:', error);
+            console.error('❌ Error loading referral stats:', error);
             Utils.showStatus(`خطأ في تحميل الإحصائيات: ${error.message}`, 'error');
             
             const container = document.querySelector('.referral-container');
@@ -152,7 +152,7 @@ class Navigation {
     }
 
     static displayReferralStats(stats) {
-        console.log('عرض إحصائيات الإحالة:', stats);
+        console.log('🔹 عرض إحصائيات الإحالة:', stats);
         
         const countEl = document.getElementById('referral-count');
         const codeEl = document.getElementById('referral-code');
@@ -194,19 +194,52 @@ class Navigation {
         `).join('');
     }
 
-    static loadProfileData() {
+    static async loadProfileData() {
         if (currentUser) {
-            const setName = (id, value) => {
-                const el = document.getElementById(id);
-                if (el) el.textContent = value;
-            };
-            
-            setName('profile-name', currentUser.user_metadata.full_name || 'غير محدد');
-            setName('profile-email', currentUser.email || 'غير محدد');
-            setName('profile-phone', currentUser.user_metadata.phone || 'غير محدد');
-            setName('profile-address', currentUser.user_metadata.address || 'غير محدد');
-            setName('profile-created', new Date(currentUser.created_at).toLocaleString('ar-SA'));
+            try {
+                // جلب البيانات من جدول profiles
+                const { data: profile, error } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (error) {
+                    console.warn('⚠️ لا يمكن جلب بيانات الملف الشخصي:', error);
+                    // استخدام البيانات من auth.users كبديل
+                    this.loadProfileFromAuth();
+                    return;
+                }
+                
+                const setName = (id, value) => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = value;
+                };
+                
+                setName('profile-name', profile.full_name || 'غير محدد');
+                setName('profile-email', profile.email || 'غير محدد');
+                setName('profile-phone', profile.phone || 'غير محدد');
+                setName('profile-address', profile.address || 'غير محدد');
+                setName('profile-created', new Date(profile.created_at).toLocaleString('ar-SA'));
+                
+            } catch (error) {
+                console.error('❌ Error loading profile data:', error);
+                this.loadProfileFromAuth();
+            }
         }
+    }
+
+    static loadProfileFromAuth() {
+        const setName = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        };
+        
+        setName('profile-name', currentUser.user_metadata.full_name || 'غير محدد');
+        setName('profile-email', currentUser.email || 'غير محدد');
+        setName('profile-phone', currentUser.user_metadata.phone || 'غير محدد');
+        setName('profile-address', currentUser.user_metadata.address || 'غير محدد');
+        setName('profile-created', new Date(currentUser.created_at).toLocaleString('ar-SA'));
     }
 
     static updateNavigation() {
@@ -240,6 +273,6 @@ class Navigation {
     }
 
     static rebindPageEvents(pageId) {
-        console.log(`إعادة ربط أحداث الصفحة: ${pageId}`);
+        console.log(`🔹 إعادة ربط أحداث الصفحة: ${pageId}`);
     }
-                }
+    }
