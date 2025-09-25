@@ -1,6 +1,5 @@
-// js/formHandlers.js - معالجات النماذج المنفصلة (مع نظام الإحالة)
+// js/formHandlers.js - معالجات النماذج المنفصلة (مصحح نهائي)
 class FormHandlers {
-    // معالجة النماذج
     static async handleFormSubmit(form) {
         const formId = form.id;
         const formData = new FormData(form);
@@ -22,7 +21,6 @@ class FormHandlers {
         }
     }
 
-    // معالجة نموذج تسجيل الدخول
     static async handleLoginForm(formData) {
         const email = formData.get('email');
         const password = formData.get('password');
@@ -40,7 +38,6 @@ class FormHandlers {
         }
     }
 
-    // معالجة نموذج إنشاء حساب (مع نظام الإحالة)
     static async handleRegisterForm(formData) {
         const userData = {
             name: formData.get('name'),
@@ -52,7 +49,7 @@ class FormHandlers {
             referralCode: formData.get('referralCode') || ReferralSystem.getStoredReferralCode()
         };
 
-        console.log('بيانات المستخدم:', userData);
+        console.log('بيانات التسجيل:', userData);
 
         // التحقق من البيانات
         if (!userData.name || !userData.phone || !userData.address || !userData.email || !userData.password || !userData.confirmPassword) {
@@ -69,9 +66,9 @@ class FormHandlers {
         if (userData.referralCode && userData.referralCode.trim() !== '') {
             try {
                 await ReferralSystem.validateReferralCode(userData.referralCode);
-                Utils.showStatus('رمز الإحالة صحيح، جاري إنشاء الحساب...', 'success', 'register-status');
+                Utils.showStatus('✓ رمز الإحالة صحيح', 'success', 'register-status');
             } catch (error) {
-                Utils.showStatus(`رمز الإحالة غير صحيح: ${error.message}`, 'error', 'register-status');
+                Utils.showStatus(`✗ رمز الإحالة غير صحيح: ${error.message}`, 'error', 'register-status');
                 return;
             }
         }
@@ -79,13 +76,11 @@ class FormHandlers {
         try {
             Utils.showStatus('جاري إنشاء الحساب...', 'success', 'register-status');
             await Auth.register(userData);
-            ReferralSystem.clearStoredReferralCode();
         } catch (error) {
             Utils.showStatus(`فشل في إنشاء الحساب: ${error.message}`, 'error', 'register-status');
         }
     }
 
-    // معالجة نموذج النشر
     static async handlePublishForm(formData) {
         if (!currentUser) {
             Utils.showStatus('يجب تسجيل الدخول لنشر منشور', 'error');
@@ -119,4 +114,4 @@ class FormHandlers {
             Utils.showStatus(`فشل في النشر: ${error.message}`, 'error');
         }
     }
-}
+            }
