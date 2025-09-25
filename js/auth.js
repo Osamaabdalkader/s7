@@ -1,4 +1,4 @@
-// auth.js - نظام المصادقة الكامل (مصحح)
+// auth.js - مصحح (بدون الاعتماد على profiles)
 class Auth {
     static async login(email, password) {
         try {
@@ -22,14 +22,7 @@ class Auth {
             
             Utils.showStatus('تم تسجيل الدخول بنجاح!', 'success', 'login-status');
             
-            // إنشاء رمز إحالة بعد تسجيل الدخول بنجاح
-            setTimeout(async () => {
-                try {
-                    await ReferralSystem.getOrCreateReferralCode(currentUser.id);
-                    console.log('✅ تم إنشاء/جلب رمز الإحالة بعد تسجيل الدخول');
-                } catch (error) {
-                    console.warn('⚠️ لم يتم إنشاء رمز إحالة بعد التسجيل:', error.message);
-                }
+            setTimeout(() => {
                 Navigation.showPage('home');
             }, 1000);
 
@@ -42,12 +35,12 @@ class Auth {
 
     static async register(userData) {
         try {
-            console.log('🔹 === بدء عملية التسجيل ===');
-            console.log('بيانات المستخدم:', {
-                email: userData.email,
-                name: userData.name,
-                hasReferralCode: !!userData.referralCode
-            });
+            console.log('🔹 بدء إنشاء حساب جديد...');
+            
+            // التحقق من البيانات الأساسية
+            if (!userData.email || !userData.password) {
+                throw new Error('البريد الإلكتروني وكلمة المرور مطلوبان');
+            }
 
             // 1. إنشاء المستخدم في Supabase Auth
             const { data, error } = await supabase.auth.signUp({
@@ -55,9 +48,9 @@ class Auth {
                 password: userData.password.trim(),
                 options: {
                     data: {
-                        full_name: userData.name.trim(),
-                        phone: userData.phone.trim(),
-                        address: userData.address.trim(),
+                        full_name: userData.name?.trim() || '',
+                        phone: userData.phone?.trim() || '',
+                        address: userData.address?.trim() || '',
                         referral_code_used: userData.referralCode || null
                     }
                 }
@@ -66,13 +59,17 @@ class Auth {
             if (error) {
                 console.error('❌ خطأ في إنشاء المستخدم:', error);
                 let errorMessage = 'فشل في إنشاء الحساب';
+                
                 if (error.message.includes('User already registered')) {
                     errorMessage = 'هذا البريد الإلكتروني مسجل مسبقاً';
                 } else if (error.message.includes('Password should be at least')) {
                     errorMessage = 'كلمة المرور يجب أن تكون أقوى (6 أحرف على الأقل)';
                 } else if (error.message.includes('Invalid email')) {
                     errorMessage = 'البريد الإلكتروني غير صحيح';
+                } else if (error.message.includes('Unable to validate email address')) {
+                    errorMessage = 'البريد الإلكتروني غير صالح';
                 }
+                
                 throw new Error(errorMessage);
             }
 
@@ -82,28 +79,28 @@ class Auth {
 
             console.log('✅ تم إنشاء المستخدم بنجاح:', data.user.id);
 
-            // 2. انتظار قصير لضمان اكتمال إنشاء المستخدم
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // 2. انتظار بسيط لضمان اكتمال العملية
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
             // 3. إنشاء رمز إحالة للمستخدم الجديد
             try {
-                console.log('🔹 جاري إنشاء رمز إحالة للمستخدم الجديد...');
-                const referralCode = await ReferralSystem.getOrCreateReferralCode(data.user.id);
-                console.log('✅ تم إنشاء رمز الإحالة بنجاح:', referralCode.code);
+                console.log('🔹 جاري إنشاء رمز إحالة...');
+                await ReferralSystem.getOrCreateReferralCode(data.user.id);
+                console.log('✅ تم إنشاء رمز الإحالة بنجاح');
             } catch (referralError) {
-                console.error('❌ فشل في إنشاء رمز الإحالة:', referralError);
-                // لا نوقف العملية إذا فشل إنشاء رمز الإحالة
+                console.warn('⚠️ فشل في إنشاء رمز الإحالة:', referralError.message);
+                // لا نوقف العملية
             }
 
             // 4. معالجة الإحالة إذا كان هناك رمز إحالة
             if (userData.referralCode && userData.referralCode.trim() !== '') {
                 try {
-                    console.log('🔹 جاري معالجة الإحالة بالرمز:', userData.referralCode);
+                    console.log('🔹 معالجة الإحالة...');
                     await ReferralSystem.processReferral(userData.referralCode, data.user.id);
                     console.log('✅ تمت معالجة الإحالة بنجاح');
                 } catch (referralError) {
                     console.warn('⚠️ فشل في معالجة الإحالة:', referralError.message);
-                    // لا نوقف عملية التسجيل إذا فشلت الإحالة
+                    // لا نوقف العملية
                 }
             }
 
@@ -114,16 +111,16 @@ class Auth {
             ReferralSystem.clearStoredReferralCode();
 
             // 6. إظهار رسالة النجاح
-            Utils.showStatus('تم إنشاء الحساب بنجاح! يرجى تسجيل الدخول', 'success', 'register-status');
+            Utils.showStatus('✅ تم إنشاء الحساب بنجاح! يرجى تسجيل الدخول', 'success', 'register-status');
             
             setTimeout(() => {
                 Navigation.showPage('login');
-            }, 2000);
+            }, 3000);
 
             return true;
         } catch (error) {
             console.error('❌ Error signing up:', error);
-            Utils.showStatus(`فشل في إنشاء الحساب: ${error.message}`, 'error', 'register-status');
+            Utils.showStatus(`❌ فشل في إنشاء الحساب: ${error.message}`, 'error', 'register-status');
             throw error;
         }
     }
@@ -138,7 +135,6 @@ class Auth {
             Navigation.showPage('home');
         } catch (error) {
             console.error('❌ Error signing out:', error.message);
-            alert(`خطأ في تسجيل الخروج: ${error.message}`);
         }
     }
 
@@ -150,13 +146,6 @@ class Auth {
             if (session?.user) {
                 currentUser = session.user;
                 this.onAuthStateChange();
-                
-                // التأكد من وجود رمز إحالة للمستخدم المسجل الدخول
-                try {
-                    await ReferralSystem.getOrCreateReferralCode(currentUser.id);
-                } catch (error) {
-                    console.warn('⚠️ فشل في إنشاء رمز إحالة للمستخدم المسجل:', error);
-                }
             }
         } catch (error) {
             console.error('❌ Error checking auth:', error.message);
@@ -165,30 +154,19 @@ class Auth {
 
     static onAuthStateChange() {
         Navigation.updateNavigation();
-        
-        if (currentUser) {
-            Utils.showStatus('تم تسجيل الدخول بنجاح', 'success', 'connection-status');
-        }
     }
 
     static initAuthListener() {
-        supabase.auth.onAuthStateChange(async (event, session) => {
+        supabase.auth.onAuthStateChange((event, session) => {
             console.log('🔹 Auth state changed:', event);
             
             if (event === 'SIGNED_IN' && session?.user) {
                 currentUser = session.user;
                 this.onAuthStateChange();
-                
-                // التأكد من وجود رمز إحالة بعد تسجيل الدخول
-                try {
-                    await ReferralSystem.getOrCreateReferralCode(currentUser.id);
-                } catch (error) {
-                    console.warn('⚠️ فشل في إنشاء رمز إحالة بعد التسجيل:', error);
-                }
             } else if (event === 'SIGNED_OUT') {
                 currentUser = null;
                 this.onAuthStateChange();
             }
         });
     }
-                    }
+        }
