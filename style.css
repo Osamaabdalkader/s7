@@ -744,6 +744,55 @@ footer {
     }
 }
 
+
+
+
+
+/* إضافة أنماط للأخطاء في صفحة الإحالة */
+.error-message {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+    border-right: 4px solid #dc3545;
+}
+
+.error-message h3 {
+    margin-bottom: 10px;
+    color: #721c24;
+}
+
+/* تحسينات للاستجابة */
+@media (max-width: 768px) {
+    .referral-stats-card {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-item {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .stat-icon {
+        margin-left: 0;
+        margin-bottom: 15px;
+    }
+    
+    .referral-link-container {
+        flex-direction: column;
+    }
+    
+    .copy-link-btn {
+        margin-top: 10px;
+        padding: 12px;
+    }
+    }
+
+
+
+
+
 .posts-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 2fr));
