@@ -1,14 +1,14 @@
-// js/referral.js - نظام الإحالة الكامل (مصحح نهائي)
+// js/referral.js - نظام الإحالة الكامل (مصحح العلاقات)
 class ReferralSystem {
     static async generateReferralCode(userId) {
         try {
-            console.log('محاولة إنشاء رمز إحالة للمستخدم:', userId);
+            console.log('🔹 بدء إنشاء رمز إحالة للمستخدم:', userId);
             
             if (!userId) {
                 throw new Error('معرف المستخدم مطلوب لإنشاء رمز إحالة');
             }
             
-            // إنشاء رمز فريد مع التحقق من التكرار
+            // إنشاء رمز فريد
             let code;
             let isUnique = false;
             let attempts = 0;
@@ -16,34 +16,34 @@ class ReferralSystem {
             
             while (!isUnique && attempts < maxAttempts) {
                 code = this.generateRandomCode(8);
-                console.log('المحاولة', attempts + 1, 'الرمز المولد:', code);
+                console.log('🔹 المحاولة', attempts + 1, 'الرمز المولد:', code);
                 
+                // التحقق من التكرار باستخدام استعلام مباشر
                 const { data: existingCode, error: checkError } = await supabase
                     .from('referral_codes')
-                    .select('code')
+                    .select('id')
                     .eq('code', code)
-                    .maybeSingle();
+                    .single();
                 
-                if (checkError) {
-                    console.error('خطأ في التحقق من الرمز:', checkError);
-                    throw checkError;
-                }
-                
-                if (!existingCode) {
+                if (checkError && checkError.code === 'PGRST116') {
+                    // لا يوجد رمز - فريد
                     isUnique = true;
-                } else {
+                } else if (!checkError && existingCode) {
+                    // الرمز موجود - نجرب مرة أخرى
                     attempts++;
-                    if (attempts >= maxAttempts) {
-                        throw new Error('فشل في إنشاء رمز إحالة فريد بعد ' + maxAttempts + ' محاولات');
-                    }
+                    continue;
+                } else if (checkError) {
+                    throw checkError;
+                } else {
+                    isUnique = true;
                 }
             }
             
             if (!isUnique) {
-                throw new Error('لم يتم إنشاء رمز فريد');
+                throw new Error('فشل في إنشاء رمز إحالة فريد بعد ' + maxAttempts + ' محاولات');
             }
             
-            console.log('رمز فريد تم إنشاؤه:', code, 'للمستخدم:', userId);
+            console.log('✅ رمز فريد تم إنشاؤه:', code);
             
             // إدخال الرمز في قاعدة البيانات
             const { data, error } = await supabase
@@ -59,14 +59,14 @@ class ReferralSystem {
                 .single();
             
             if (error) {
-                console.error('خطأ في إدخال الرمز:', error);
+                console.error('❌ خطأ في إدخال الرمز:', error);
                 throw error;
             }
             
-            console.log('تم إنشاء رمز الإحالة بنجاح:', data);
+            console.log('✅ تم إنشاء رمز الإحالة بنجاح:', data);
             return data;
         } catch (error) {
-            console.error('Error generating referral code:', error);
+            console.error('❌ Error generating referral code:', error);
             throw new Error('فشل في إنشاء رمز الإحالة: ' + error.message);
         }
     }
@@ -82,7 +82,7 @@ class ReferralSystem {
 
     static async getOrCreateReferralCode(userId) {
         try {
-            console.log('جلب أو إنشاء رمز إحالة للمستخدم:', userId);
+            console.log('🔹 جلب أو إنشاء رمز إحالة للمستخدم:', userId);
             
             if (!userId) {
                 throw new Error('معرف المستخدم مطلوب');
@@ -93,24 +93,21 @@ class ReferralSystem {
                 .from('referral_codes')
                 .select('*')
                 .eq('user_id', userId)
-                .maybeSingle();
+                .single();
             
-            if (error && error.code !== 'PGRST116') {
-                console.error('خطأ في جلب الرمز:', error);
+            if (error && error.code === 'PGRST116') {
+                // لا يوجد رمز - ننشئ واحداً جديداً
+                console.log('🔹 لا يوجد رمز، جاري إنشاء رمز جديد...');
+                return await this.generateReferralCode(userId);
+            } else if (error) {
+                console.error('❌ خطأ في جلب الرمز:', error);
                 throw error;
             }
             
-            // إذا كان الرمز موجوداً
-            if (data) {
-                console.log('تم العثور على رمز موجود:', data.code);
-                return data;
-            }
-            
-            // إذا لم يكن هناك رمز، ننشئ واحداً جديداً
-            console.log('لا يوجد رمز، جاري إنشاء رمز جديد...');
-            return await this.generateReferralCode(userId);
+            console.log('✅ تم العثور على رمز موجود:', data.code);
+            return data;
         } catch (error) {
-            console.error('Error in getOrCreateReferralCode:', error);
+            console.error('❌ Error in getOrCreateReferralCode:', error);
             throw error;
         }
     }
@@ -122,16 +119,20 @@ class ReferralSystem {
             }
             
             const cleanCode = code.toUpperCase().trim();
-            console.log('التحقق من صحة الرمز:', cleanCode);
+            console.log('🔹 التحقق من صحة الرمز:', cleanCode);
             
+            // استعلام مباشر بدون علاقات معقدة
             const { data, error } = await supabase
                 .from('referral_codes')
-                .select('*, user:user_id(email, user_metadata)')
+                .select('*')
                 .eq('code', cleanCode)
-                .maybeSingle();
+                .single();
             
             if (error) {
-                console.error('خطأ في التحقق من الرمز:', error);
+                if (error.code === 'PGRST116') {
+                    throw new Error('رمز الإحالة غير صحيح');
+                }
+                console.error('❌ خطأ في التحقق من الرمز:', error);
                 throw error;
             }
             
@@ -139,17 +140,17 @@ class ReferralSystem {
                 throw new Error('رمز الإحالة غير صحيح');
             }
             
-            console.log('الرمز صحيح، يعود للمستخدم:', data.user.email);
+            console.log('✅ الرمز صحيح، يعود للمستخدم:', data.user_id);
             return data;
         } catch (error) {
-            console.error('Error validating referral code:', error);
+            console.error('❌ Error validating referral code:', error);
             throw error;
         }
     }
 
     static async processReferral(referralCode, referredUserId) {
         try {
-            console.log('بدء معالجة الإحالة:', { 
+            console.log('🔹 بدء معالجة الإحالة:', { 
                 referralCode: referralCode, 
                 referredUserId: referredUserId 
             });
@@ -166,12 +167,12 @@ class ReferralSystem {
                 throw new Error('لا يمكن استخدام رمز الإحالة الخاص بك');
             }
             
-            // التحقق من عدم وجود إحالة سابقة لنفس المستخدم
+            // التحقق من عدم وجود إحالة سابقة
             const { data: existingReferral, error: checkError } = await supabase
                 .from('referrals')
                 .select('id')
                 .eq('referred_id', referredUserId)
-                .maybeSingle();
+                .single();
             
             if (existingReferral) {
                 throw new Error('تم تسجيل إحالة لهذا المستخدم مسبقاً');
@@ -194,53 +195,51 @@ class ReferralSystem {
                 .select();
             
             if (error) {
-                console.error('خطأ في تسجيل الإحالة:', error);
+                console.error('❌ خطأ في تسجيل الإحالة:', error);
                 throw error;
             }
             
             // زيادة عداد الإحالات
             await this.incrementReferralCount(referralData.user_id);
             
-            console.log('تمت معالجة الإحالة بنجاح:', data);
+            console.log('✅ تمت معالجة الإحالة بنجاح');
             return true;
         } catch (error) {
-            console.error('Error processing referral:', error);
+            console.error('❌ Error processing referral:', error);
             throw new Error('فشل في معالجة الإحالة: ' + error.message);
         }
     }
 
     static async incrementReferralCount(userId) {
         try {
-            console.log('زيادة عداد الإحالات للمستخدم:', userId);
+            console.log('🔹 زيادة عداد الإحالات للمستخدم:', userId);
             
             const { error } = await supabase.rpc('increment_referral_count', {
                 user_uuid: userId
             });
             
             if (error) {
-                console.error('خطأ في زيادة العداد:', error);
+                console.error('❌ خطأ في زيادة العداد:', error);
                 throw error;
             }
             
-            console.log('تم زيادة العداد بنجاح');
+            console.log('✅ تم زيادة العداد بنجاح');
         } catch (error) {
-            console.error('Error incrementing referral count:', error);
+            console.error('❌ Error incrementing referral count:', error);
             throw error;
         }
     }
 
     static async getUserReferralStats(userId) {
         try {
-            console.log('جلب إحصائيات الإحالة للمستخدم:', userId);
+            console.log('🔹 جلب إحصائيات الإحالة للمستخدم:', userId);
             
             if (!userId) {
                 throw new Error('معرف المستخدم مطلوب');
             }
             
-            const [referralCode, referrals] = await Promise.all([
-                this.getOrCreateReferralCode(userId),
-                this.getUserReferrals(userId)
-            ]);
+            const referralCode = await this.getOrCreateReferralCode(userId);
+            const referrals = await this.getUserReferrals(userId);
             
             const stats = {
                 code: referralCode?.code || 'غير متوفر',
@@ -248,26 +247,62 @@ class ReferralSystem {
                 referrals: referrals || []
             };
             
-            console.log('الإحصائيات المستلمة:', stats);
+            console.log('✅ الإحصائيات المستلمة:', stats);
             return stats;
         } catch (error) {
-            console.error('Error getting referral stats:', error);
+            console.error('❌ Error getting referral stats:', error);
             throw new Error('فشل في جلب إحصائيات الإحالة: ' + error.message);
         }
     }
 
     static async getUserReferrals(userId) {
         try {
+            // استعلام بسيط بدون علاقات معقدة
             const { data, error } = await supabase
                 .from('referrals')
-                .select('*, referred:referred_id(email, user_metadata, created_at)')
+                .select('referred_id, created_at, referral_code')
                 .eq('referrer_id', userId)
                 .order('created_at', { ascending: false });
             
             if (error) throw error;
-            return data || [];
+            
+            // جلب معلومات المستخدمين المشير إليهم بشكل منفصل
+            const referralsWithUsers = await Promise.all(
+                (data || []).map(async (ref) => {
+                    try {
+                        // جلب البريد الإلكتروني للمستخدم المشير إليه
+                        const { data: userData, error: userError } = await supabase
+                            .from('profiles') // إذا كان لديك جدول profiles
+                            .select('email')
+                            .eq('id', ref.referred_id)
+                            .single();
+                        
+                        if (userError) {
+                            // إذا لم يكن هناك جدول profiles، نستخدم auth.users (يتطلب صلاحيات خاصة)
+                            console.warn('لا يمكن جلب بيانات المستخدم:', userError);
+                            return {
+                                ...ref,
+                                referred: { email: 'مستخدم غير معروف' }
+                            };
+                        }
+                        
+                        return {
+                            ...ref,
+                            referred: { email: userData?.email || 'مستخدم غير معروف' }
+                        };
+                    } catch (error) {
+                        console.error('Error fetching user data:', error);
+                        return {
+                            ...ref,
+                            referred: { email: 'مستخدم غير معروف' }
+                        };
+                    }
+                })
+            );
+            
+            return referralsWithUsers;
         } catch (error) {
-            console.error('Error getting user referrals:', error);
+            console.error('❌ Error getting user referrals:', error);
             return [];
         }
     }
@@ -290,7 +325,7 @@ class ReferralSystem {
             Utils.showStatus('تم نسخ رابط الإحالة إلى الحافظة', 'success');
             return link;
         } catch (error) {
-            console.error('Error copying referral link:', error);
+            console.error('❌ Error copying referral link:', error);
             Utils.showStatus(`خطأ في نسخ الرابط: ${error.message}`, 'error');
             throw error;
         }
@@ -305,16 +340,16 @@ class ReferralSystem {
                 const cleanCode = refCode.trim().toUpperCase();
                 localStorage.setItem('referral_code', cleanCode);
                 
-                console.log('تم حفظ رمز الإحالة من URL:', cleanCode);
+                console.log('✅ تم حفظ رمز الإحالة من URL:', cleanCode);
                 
                 // إزالة المعلمة من URL
-                const newUrl = window.location.pathname + window.location.hash;
+                const newUrl = window.location.pathname;
                 window.history.replaceState({}, document.title, newUrl);
                 
                 return cleanCode;
             }
         } catch (error) {
-            console.error('Error checking URL referral:', error);
+            console.error('❌ Error checking URL referral:', error);
         }
         return null;
     }
