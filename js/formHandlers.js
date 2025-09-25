@@ -1,4 +1,4 @@
-// js/formHandlers.js - معالجات النماذج المنفصلة (مصحح نهائي)
+// js/formHandlers.js - معالجات النماذج الكاملة (مصحح)
 class FormHandlers {
     static async handleFormSubmit(form) {
         const formId = form.id;
@@ -114,4 +114,4 @@ class FormHandlers {
             Utils.showStatus(`فشل في النشر: ${error.message}`, 'error');
         }
     }
-            }
+                }
