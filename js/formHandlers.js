@@ -114,4 +114,4 @@ class FormHandlers {
             Utils.showStatus(`فشل في النشر: ${error.message}`, 'error');
         }
     }
-                }
+                                }
