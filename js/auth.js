@@ -1,4 +1,4 @@
-// auth.js - معدل مع دعم profiles
+// auth.js - نظام المصادقة الكامل (مصحح)
 class Auth {
     static async login(email, password) {
         try {
@@ -22,7 +22,14 @@ class Auth {
             
             Utils.showStatus('تم تسجيل الدخول بنجاح!', 'success', 'login-status');
             
-            setTimeout(() => {
+            // إنشاء رمز إحالة بعد تسجيل الدخول بنجاح
+            setTimeout(async () => {
+                try {
+                    await ReferralSystem.getOrCreateReferralCode(currentUser.id);
+                    console.log('✅ تم إنشاء/جلب رمز الإحالة بعد تسجيل الدخول');
+                } catch (error) {
+                    console.warn('⚠️ لم يتم إنشاء رمز إحالة بعد التسجيل:', error.message);
+                }
                 Navigation.showPage('home');
             }, 1000);
 
@@ -75,8 +82,8 @@ class Auth {
 
             console.log('✅ تم إنشاء المستخدم بنجاح:', data.user.id);
 
-            // 2. انتظار إنشاء profile تلقائياً
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // 2. انتظار قصير لضمان اكتمال إنشاء المستخدم
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
             // 3. إنشاء رمز إحالة للمستخدم الجديد
             try {
@@ -184,4 +191,4 @@ class Auth {
             }
         });
     }
-    }
+                    }
