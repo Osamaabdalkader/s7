@@ -1,9 +1,42 @@
-// js/referral.js - نظام الإحالة الكامل
+// js/referral.js - نظام الإحالة الكامل (معدل)
 class ReferralSystem {
     static async generateReferralCode(userId) {
         try {
+            // التأكد من أن userId موجود
+            if (!userId) {
+                throw new Error('معرف المستخدم مطلوب');
+            }
+            
             // إنشاء رمز إحالة فريد مكون من 8 أحرف
-            const code = this.generateRandomCode(8);
+            let code;
+            let isUnique = false;
+            let attempts = 0;
+            
+            while (!isUnique && attempts < 10) {
+                code = this.generateRandomCode(8);
+                
+                // التحقق من أن الرمز فريد
+                const { data: existingCode, error: checkError } = await supabase
+                    .from('referral_codes')
+                    .select('code')
+                    .eq('code', code)
+                    .single();
+                
+                if (checkError && checkError.code === 'PGRST116') {
+                    // الرمز فريد (لا يوجد سجل)
+                    isUnique = true;
+                } else if (!checkError && existingCode) {
+                    // الرمز موجود، نجرب مرة أخرى
+                    attempts++;
+                    continue;
+                } else {
+                    throw checkError;
+                }
+            }
+            
+            if (!isUnique) {
+                throw new Error('فشل في إنشاء رمز إحالة فريد');
+            }
             
             const { data, error } = await supabase
                 .from('referral_codes')
@@ -34,7 +67,7 @@ class ReferralSystem {
         return result;
     }
 
-    static async getReferralCode(userId) {
+    static async getOrCreateReferralCode(userId) {
         try {
             const { data, error } = await supabase
                 .from('referral_codes')
@@ -46,6 +79,7 @@ class ReferralSystem {
             
             // إذا لم يكن هناك رمز، ننشئ واحداً جديداً
             if (!data) {
+                console.log('إنشاء رمز إحالة جديد للمستخدم:', userId);
                 return await this.generateReferralCode(userId);
             }
             
@@ -84,6 +118,8 @@ class ReferralSystem {
 
     static async processReferral(referralCode, referredUserId) {
         try {
+            console.log('معالجة الإحالة:', { referralCode, referredUserId });
+            
             // التحقق من صحة الرمز
             const referralData = await this.validateReferralCode(referralCode);
             
@@ -147,10 +183,8 @@ class ReferralSystem {
 
     static async getUserReferralStats(userId) {
         try {
-            const [referralCode, referrals] = await Promise.all([
-                this.getReferralCode(userId),
-                this.getUserReferrals(userId)
-            ]);
+            const referralCode = await this.getOrCreateReferralCode(userId);
+            const referrals = await this.getUserReferrals(userId);
             
             return {
                 code: referralCode?.code || 'غير متوفر',
