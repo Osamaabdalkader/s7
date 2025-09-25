@@ -1,4 +1,4 @@
-// navigation.js - معدل (مع نظام الإحالة)
+// navigation.js - معدل (مع نظام الإحالة وإصلاح التحميل)
 class Navigation {
     static async showPage(pageId, params = {}) {
         console.log(`جاري تحميل الصفحة: ${pageId}`, params);
@@ -48,7 +48,7 @@ class Navigation {
                 this.handlePostDetailsPage(params);
                 break;
             case 'referral':
-                this.handleReferralPage();
+                await this.handleReferralPage();
                 break;
         }
         
@@ -126,11 +126,28 @@ class Navigation {
         }
 
         try {
+            // إعطاء وقت لتحميل بيانات المستخدم
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
             const stats = await ReferralSystem.getUserReferralStats(currentUser.id);
             this.displayReferralStats(stats);
         } catch (error) {
             console.error('Error loading referral stats:', error);
             Utils.showStatus('خطأ في تحميل إحصائيات الإحالة', 'error');
+            
+            // عرض رسالة خطأ مفصلة
+            const container = document.querySelector('.referral-container');
+            if (container) {
+                container.innerHTML += `
+                    <div class="error-message">
+                        <h3>خطأ في تحميل البيانات</h3>
+                        <p>${error.message}</p>
+                        <button onclick="Navigation.showPage('referral')" class="btn-secondary">
+                            <i class="fas fa-refresh"></i> إعادة المحاولة
+                        </button>
+                    </div>
+                `;
+            }
         }
     }
 
@@ -189,6 +206,7 @@ class Navigation {
         const headerElements = {
             'publish-link': currentUser,
             'profile-link': currentUser,
+            'referral-link': currentUser,
             'logout-link': currentUser,
             'login-link': !currentUser,
             'register-link': !currentUser
@@ -202,10 +220,14 @@ class Navigation {
         }
 
         const footerProfile = document.getElementById('footer-profile-link');
+        const footerReferral = document.getElementById('footer-referral-link');
         const footerPublish = document.getElementById('footer-publish-link');
         
         if (footerProfile) {
             footerProfile.style.display = currentUser ? 'flex' : 'none';
+        }
+        if (footerReferral) {
+            footerReferral.style.display = currentUser ? 'flex' : 'none';
         }
         if (footerPublish) {
             footerPublish.style.display = currentUser ? 'flex' : 'none';
@@ -226,4 +248,4 @@ class Navigation {
     static rebindPageEvents(pageId) {
         console.log(`إعادة ربط أحداث الصفحة: ${pageId}`);
     }
-}
+    }
